@@ -6,8 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 # Đọc dữ liệu
-df = pd.read_csv(r'C:\python\dataset\sss.csv')
-# df = df[df['Label'].str.contains('Normal', case=False, na=False)]
+df = pd.read_csv(r'C:\python\result_20250506210405.csv').head()
+
 
 #Xóa các cột không cần thiết
 drop = ['StartTime', 'SrcAddr', 'Sport', 'DstAddr', 'Dport', 'State']
@@ -47,85 +47,92 @@ for col in processed_columns:
 df_test = df_test[processed_columns]
 
 
-model = joblib.load('dump_random_forest.pkl')
+model = joblib.load(r'C:\python\VuHai-20213903\dump_random_forest.pkl')
 
 
 y_pred = model.predict(df_test)
 
-
 df_test['y_pred'] = y_pred     
-rows_label_1 = df_test[df_test['y_pred'] == 1]  # in ra các dòng label = 1 trừ cột 
+
+
+unique, counts = np.unique(y_pred, return_counts=True)
+total = len(y_pred)
+
+count_botnet = 0
+
+for label, count in zip(unique, counts):
+    percent_botnet = (count / total) * 100
+    print(f"Giá trị {label}: {count} mẫu ({percent_botnet:.2f}%)")
+ 
+    if label == 1: 
+        count_botnet = count
+        #if percent_botnet > 50 and count_botnet > 1000:
+            
+        attack_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+   
+    # #     #  Gọi file ml.py
+    # #     #  subprocess.run(['python', 'ml.py'])
+    
+rows_label_1 = df_test[df_test['y_pred'] == 1]  # in ra các dòng label = 1 
 rows_label_1 = rows_label_1.drop("y_pred", axis=1)
 
-
-def detect_dos_attack_type(rows_label_1):  # phân biệt các loại tấn công tcp flood , udp flood , icmp flood và other
-    total = len(rows_label_1)
-    present_tcp = present_udp = present_icmp = 0
-  
-
-    for _, row in rows_label_1.iterrows():
-        proto_tcp = row.get('Proto_tcp', 0)
-        proto_udp = row.get('Proto_udp', 0)
-        proto_icmp = row.get('Proto_icmp', 0)
-        dur = row['Dur']
-        src_bytes = row['SrcBytes']
-        tot_pkts = row['TotPkts']
-        tot_bytes = row['TotBytes']
-
-        if proto_tcp == 1 and src_bytes <= 200 and dur < 3 and tot_pkts > 4 and tot_bytes > 100:
-            present_tcp += 1
-
-        elif proto_udp == 1 and tot_pkts > 1 and tot_bytes > 100 and src_bytes < 200:
-            present_udp += 1
-
-        elif proto_icmp == 1 and tot_bytes > 65000:
-            present_icmp += 1
-
-    # Sau vòng lặp mới xác định loại tấn công
-    if present_tcp / total >= 0.7:
-        attack_types = 'TCP Flood'
-    elif present_udp / total >= 0.7:
-        attack_types = 'UDP Flood'
-    elif present_icmp / total >= 0.7:
-        attack_types = 'ICMP Flood'
-    else:
-        attack_types = 'DoS_others'
-
-    return attack_types
-
-attack_types = detect_dos_attack_type(rows_label_1)
-
-print (attack_types)
+dur = round( rows_label_1['Dur'].mean() , 3 ) 
+tot_pkts = int( rows_label_1['TotPkts'].mean())
+tot_bytes = int( rows_label_1['TotBytes'].mean() )
+src_bytes = int( rows_label_1['SrcBytes'].mean() )
+dtos_0_0 = round ( rows_label_1['dTos_0.0'].mean() ,3 )
 
 
-# unique, counts = np.unique(y_pred, return_counts=True)
-# total = len(y_pred)
-
-
-# for label, count in zip(unique, counts):
-#     percent = (count / total) * 100
-#     print(f"Giá trị {label}: {count} mẫu ({percent:.2f}%)")
+# Đếm số lượng True trong mỗi cột dir
+count_dir1 = rows_label_1['Dir_->'].sum()  # Số lượng True trong cột Dir_->
+count_dir2 = rows_label_1['Dir_<->'].sum()  # Số lượng True trong cột Dir_<->
+count_dir3  = rows_label_1['Dir_others'].sum()  #Số lượng True trong cột DIr_others
+if count_dir1 > count_dir2 and count_dir1 > count_dir3:
     
-# percent_botnet = 0
-# if 1 in unique:
-#     index = list(unique).index(1)
-#     percent_botnet = (counts[index] / total) * 100
+    dir_forward = 1
+    dir_bidirectional = 0
+    dir_others = 0
     
-# df_test['y_pred'] = y_pred     
-# rows_botnet = df_test[df_test['y_pred'] == 1]  # các dòng label = 1 
-
-
-# if percent_botnet > 50 and counts[index] > 1000:  #counts[index] số mẫu 1 ( tấn công )
-#     attack_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-
-#     print("Attack detected!")
-#     print(f"Time: {attack_time}")
-
+elif count_dir2 > count_dir1 and count_dir2 > count_dir3:
     
-#     log = f"{attack_time},{counts[index]}\n"
-#     with open("attack_log.csv", "a") as file:
-#         file.write(log)
-        
-#     # Gọi file ml.py
-#     # subprocess.run(['python', 'ml.py'])
+    dir_forward = 0
+    dir_bidirectional = 1
+    dir_others = 0
+
+elif count_dir3 > count_dir1 and count_dir3 > count_dir2:
+
+    dir_forward = 0
+    dir_bidirectional = 0
+    dir_others = 1
+else:  # các trường hợp khác không thể dự đoán được nên cho bằng NaN hết    
+    dir_forward = "NaN"
+    dir_bidirectional = "NaN"
+    dir_others = "NaN"
+
+
+# Đếm số lượng True trong mỗi cột proto
+count_icmp = rows_label_1['Proto_icmp'].sum()  # Số lượng True trong cột Proto_icmp
+count_tcp = rows_label_1['Proto_tcp'].sum()  # Số lượng True trong cột Proto_tcp
+count_udp = rows_label_1['Proto_udp'].sum()  # Số lượng True trong cột Proto_udp
+
+if count_icmp > count_tcp and count_icmp > count_udp:
+    proto_icmp = 1
+    proto_tcp = 0
+    proto_udp = 0
+elif count_tcp > count_icmp and count_tcp > count_udp:
+    proto_icmp = 0
+    proto_tcp = 1
+    proto_udp = 0
+elif count_udp > count_icmp and count_udp > count_tcp:
+    proto_icmp = 0
+    proto_tcp = 0
+    proto_udp = 1
+    
+else:# các trường hợp khác không thể dự đoán được nên cho bằng NaN hết    
+    proto_icmp = "NaN"
+    proto_tcp = "NaN"
+    proto_udp = "NaN"
+
+
+
+

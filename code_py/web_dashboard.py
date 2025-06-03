@@ -1,100 +1,120 @@
-import pandas as pd
+import dash
+from dash import dcc, html
+from dash.dependencies import Input, Output
 import plotly.express as px
-from dash import Dash, dcc, html, Output, Input
-import dash_bootstrap_components as dbc
+import pandas as pd
+import requests
 
-# Khởi tạo ứng dụng Dash
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-# Layout của ứng dụng
+widget_style = {
+    'border': '1px solid #ccc',
+    'padding': '10px',
+    'borderRadius': '10px',
+    'backgroundColor': '#f5f5f5',
+    'boxShadow': '2px 2px 6px rgba(0,0,0,0.1)',
+}
+gray_bg = '#f5f5f5'
+
+app = dash.Dash(__name__)
+
 app.layout = html.Div([
-    html.H1("Phát hiện tấn công mạng - Thời gian thực", style={'textAlign': 'center'}),
-    
-    # Thông báo cảnh báo (Alert)
-    html.Div(id='alerts', style={'color': 'red', 'font-weight': 'bold', 'textAlign': 'center'}),
-    
-    # Thống kê tổng quan
-    html.Div(id='attack-stats', style={'font-size': '18px', 'textAlign': 'center', 'marginTop': '20px'}),
-    
-    # Bảng điều khiển (Control Panel) để lọc tấn công
-    html.Div([  
-        dcc.Dropdown(
-            id='attack-filter',
-            options=[
-                {'label': 'Tất cả', 'value': 'all'},
-                {'label': 'DDoS', 'value': 'ddos'},
-                {'label': 'Phishing', 'value': 'phishing'}
-            ],
-            value='all',  # Mặc định lọc tất cả
-            style={'width': '50%', 'margin': '0 auto'}
-        )
-    ], style={'textAlign': 'center', 'marginTop': '20px'}),
-    
-    # Biểu đồ tấn công theo thời gian
-    dcc.Graph(id='attack-graph'),
-    
-    # Biểu đồ pie chart cho các loại tấn công
-    dcc.Graph(id='attack-pie-chart', style={'marginTop': '20px'}),
-    
-    # Thời gian cập nhật biểu đồ
-    dcc.Interval(
-        id='interval-component',
-        interval=5*1000,  # cập nhật mỗi 5 giây
-        n_intervals=0
-    )
+    html.H1("DASHBOARD GIÁM SÁT BOTNET", style={'textAlign': 'center', 'marginBottom': '20px'}),
+
+    dcc.Interval(id='interval-update', interval=10*1000, n_intervals=0),
+
+    html.Div([
+        html.Div([
+            dcc.Graph(id='line-graph')
+        ], style={**widget_style, 'width': '40%', 'display': 'inline-block'}),
+
+        html.Div([
+            dcc.Graph(id='bar-graph')
+        ], style={**widget_style, 'width': '40%', 'display': 'inline-block', 'marginLeft': '4%'})
+    ], style={'textAlign': 'center'}),
+
+    html.Div([
+        html.Div([
+            dcc.Graph(id='dir-graph')
+        ], style={**widget_style, 'width': '40%', 'display': 'inline-block'}),
+
+        html.Div([
+            dcc.Graph(id='proto-graph')
+        ], style={**widget_style, 'width': '40%', 'display': 'inline-block', 'marginLeft': '4%'})
+    ], style={'textAlign': 'center'})
 ])
 
-# Callback để cập nhật biểu đồ và thông báo
 @app.callback(
-    [Output('attack-graph', 'figure'),
-     Output('attack-stats', 'children'),
-     Output('alerts', 'children'),
-     Output('attack-pie-chart', 'figure')],
-    [Input('interval-component', 'n_intervals'),
-     Input('attack-filter', 'value')]
+    Output('line-graph', 'figure'),
+    Output('bar-graph', 'figure'),
+    Output('dir-graph', 'figure'),
+    Output('proto-graph', 'figure'),
+    Input('interval-update', 'n_intervals')
 )
-def update_graph(n, filter_value):
+def update_graphs(n):
+    url = "http://127.0.0.1:8000/"
     try:
-        df = pd.read_csv("attack_log.csv", names=["timestamp",  "samples"])
-
-
-        # Kiểm tra nếu DataFrame không trống
-        if df.empty:
-            return {}, "Không có dữ liệu tấn công", "Hệ thống ổn định.", {}
-
-        # Chuyển đổi thời gian và xử lý dữ liệu
-        df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
-        df['samples'] = pd.to_numeric(df['samples'], errors='coerce')
-
-
-        # Lấy 10 bản ghi cuối cùng
-        df = df.tail(10)
-
-        # Tính toán các thống kê
-        total_attacks = df.shape[0]
-        max_attack = df['samples'].max()
-
-        # Thông báo cảnh báo
-        if max_attack > 1000:
-            alert_message = "Cảnh báo: Tấn công DDoS có thể đang xảy ra!"
-        else:
-            alert_message = "Hệ thống ổn định."
-
-        stats = f"Tổng số cuộc tấn công: {total_attacks} | Mức tấn công cao nhất: {max_attack}"
-
-        # Cập nhật biểu đồ Line chart
-        fig_line = px.line(df, x="timestamp", y="samples", title="Tấn công theo thời gian")
-        fig_line.update_layout(xaxis_title='Thời gian', yaxis_title='Số lượng mẫu')
-
-        # Cập nhật biểu đồ Pie chart
-        fig_pie = px.pie(df, names='samples', title='Tỷ lệ các loại tấn công')
-
-        return fig_line, stats, alert_message, fig_pie
+        response = requests.get(url)
+        data = response.json().get("data", [])
     except Exception as e:
-        print(f"Lỗi: {e}")
-        return {}, "Không có dữ liệu tấn công", "Hệ thống gặp sự cố.", {}
+        data = []
+        print("Lỗi khi gọi API:", e)
+
+    columns = [
+        "id", "time", "duration", "count_botnet",
+        "tot_pkts", "tot_bytes", "src_bytes",
+        "dir_forward", "dir_bidirectional", "dir_others",
+        "proto_icmp", "proto_tcp", "proto_udp",
+        "dTos_0_0"
+    ]
+    df = pd.DataFrame(data, columns=columns)
 
 
-# Chạy ứng dụng
+    def fig_line(): # đồ thị đường biểu hiện số mẫu botnet
+        fig = px.line( df, x='time', y='count_botnet', color_discrete_sequence=['red']  ,
+            title='Số lượng Botnet theo Thời gian',
+            labels={'time': 'Thời gian', 'count_botnet': 'Số lượng Botnet'},
+            hover_data={'time': True, 'count_botnet': True, 'duration': True}
+        )
+        return fig
+
+    def fig_bar():  # đồ thị cột biểu hiện cuộc tấn công trong 1 ngày
+        df["time"] = pd.to_datetime(df["time"])
+        df['date'] = df['time'].dt.date
+        df_attack_count = df.groupby('date').size().reset_index(name='attacks_in_day')
+        df_attack_count.columns = ['date', 'attacks_in_day']
+        
+        latest_date = df_attack_count['date'].max()
+        attacks_counts = df_attack_count[df_attack_count['date'] == latest_date]['attacks_in_day'].values[0]
+        fig = px.bar( df_attack_count, x='date', y='attacks_in_day', title=f'Cuộc tấn công gần nhất vào ({latest_date}) có : {attacks_counts}',
+            labels={'date': 'Ngày', 'attacks_in_day': 'Số cuộc tấn công'}
+        ) 
+     
+        return fig
+
+    def fig_dir():  # đồ thị tròn mô tả tỉ lệ hướng đi của cuộc tấn công 
+        dir_data = df[['dir_forward', 'dir_bidirectional', 'dir_others']].sum().reset_index()
+        dir_data.columns = ['Direction', 'Count']
+        fig = px.pie(dir_data, names='Direction',values='Count',title='Tỷ lệ Hướng Truyền (Direction)')
+        
+        return fig
+
+    def fig_proto(): # đồ thị tròn mô tả tỉ lệ giao thức cuộc tấn công
+      
+        proto_data = df[['proto_icmp', 'proto_tcp', 'proto_udp']].sum().reset_index()
+        proto_data.columns = ['Protocol', 'Count']
+        fig = px.pie( proto_data,names='Protocol',values='Count',title='Tỷ lệ Giao Thức (Protocol)' )
+        
+        return fig
+
+    figs = [fig_line(), fig_bar(), fig_dir(), fig_proto()]
+    for fig in figs:
+        fig.update_layout(
+            plot_bgcolor=gray_bg,
+            paper_bgcolor=gray_bg,
+            font=dict(color='black'),
+            margin=dict(t=30, l=30, r=30, b=30)
+        )
+    return figs
+
 if __name__ == '__main__':
     app.run(debug=True)

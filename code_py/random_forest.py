@@ -1,7 +1,6 @@
 import time 
 import network2 as net
 import numpy as np
-from sklearn.metrics import accuracy_score
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 from sklearn.preprocessing import label_binarize
@@ -9,7 +8,7 @@ import joblib
 x_train, x_test, y_train, y_test = net.ml()
 
 model = RandomForestClassifier(
-    n_estimators=100,
+    n_estimators=285,
     criterion='gini',
     max_depth=15,
     min_samples_split=5,
