@@ -69,7 +69,7 @@ def update_graphs(n):
     df = pd.DataFrame(data, columns=columns)
 
 
-    def fig_line(): # đồ thị đường biểu hiện số mẫu botnet
+    def fig_line(): # đồ thị đường biểu hiện số mẫu DDoS
         fig = px.line( df, x='time', y='count_botnet', color_discrete_sequence=['red']  ,
             title='Số lượng DDoS theo Thời gian',
             labels={'time': 'Thời gian', 'count_botnet': 'Số lượng DDoS'},
@@ -94,7 +94,7 @@ def update_graphs(n):
     def fig_dir():  # đồ thị tròn mô tả tỉ lệ hướng đi của cuộc tấn công 
         dir_data = df[['dir_forward', 'dir_bidirectional']].sum().reset_index()
         dir_data.columns = ['Direction', 'Count']
-        fig = px.pie(dir_data, names='Direction',values='Count',title='Tỷ lệ Hướng Truyền (Direction)')
+        fig = px.pie(dir_data, names='Direction',values='Count',title='Tỷ lệ Hướng Truyền ')
         
         return fig
 
@@ -102,7 +102,7 @@ def update_graphs(n):
       
         proto_data = df[['proto_icmp', 'proto_tcp', 'proto_udp']].sum().reset_index()
         proto_data.columns = ['Protocol', 'Count']
-        fig = px.pie( proto_data,names='Protocol',values='Count',title='Tỷ lệ Giao Thức (Protocol)' )
+        fig = px.pie( proto_data,names='Protocol',values='Count',title='Tỷ lệ Giao Thức ' )
         
         return fig
 
