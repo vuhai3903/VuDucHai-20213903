@@ -18,7 +18,7 @@ gray_bg = '#f5f5f5'
 app = dash.Dash(__name__)
 
 app.layout = html.Div([
-    html.H1("DASHBOARD GIÁM SÁT BOTNET", style={'textAlign': 'center', 'marginBottom': '20px'}),
+    html.H1("DASHBOARD GIÁM SÁT DDoS", style={'textAlign': 'center', 'marginBottom': '20px'}),
 
     dcc.Interval(id='interval-update', interval=10*1000, n_intervals=0),
 
@@ -62,17 +62,17 @@ def update_graphs(n):
     columns = [
         "id", "time", "duration", "count_botnet",
         "tot_pkts", "tot_bytes", "src_bytes",
-        "dir_forward", "dir_bidirectional", "dir_others",
+        "dir_forward", "dir_bidirectional",
         "proto_icmp", "proto_tcp", "proto_udp",
-        "dTos_0_0"
+        "dTos_0_0", "dTos_10_0"
     ]
     df = pd.DataFrame(data, columns=columns)
 
 
     def fig_line(): # đồ thị đường biểu hiện số mẫu botnet
         fig = px.line( df, x='time', y='count_botnet', color_discrete_sequence=['red']  ,
-            title='Số lượng Botnet theo Thời gian',
-            labels={'time': 'Thời gian', 'count_botnet': 'Số lượng Botnet'},
+            title='Số lượng DDoS theo Thời gian',
+            labels={'time': 'Thời gian', 'count_botnet': 'Số lượng DDoS'},
             hover_data={'time': True, 'count_botnet': True, 'duration': True}
         )
         return fig
@@ -92,7 +92,7 @@ def update_graphs(n):
         return fig
 
     def fig_dir():  # đồ thị tròn mô tả tỉ lệ hướng đi của cuộc tấn công 
-        dir_data = df[['dir_forward', 'dir_bidirectional', 'dir_others']].sum().reset_index()
+        dir_data = df[['dir_forward', 'dir_bidirectional']].sum().reset_index()
         dir_data.columns = ['Direction', 'Count']
         fig = px.pie(dir_data, names='Direction',values='Count',title='Tỷ lệ Hướng Truyền (Direction)')
         

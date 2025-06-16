@@ -3,136 +3,126 @@ import joblib
 from datetime import datetime
 import subprocess
 import numpy as np
-import matplotlib.pyplot as plt
 import os
-# Đọc dữ liệu
-df = pd.read_csv(r'C:\python\result_20250506210405.csv').head()
+
+try :
+    df = pd.read_csv(r'C:\python\dataset\capture20110816-3.csv').head(50000)
+    #Xóa các cột không cần thiết
+    drop = ['StartTime', 'SrcAddr', 'Sport', 'DstAddr', 'Dport', 'State']
+    df = df.drop(drop, axis=1)
+    df = df.fillna(10)
+
+    # One-hot encoding
+    df_test = pd.get_dummies(df, columns=['Dir', 'Proto', 'dTos'])
 
 
-#Xóa các cột không cần thiết
-drop = ['StartTime', 'SrcAddr', 'Sport', 'DstAddr', 'Dport', 'State']
-df = df.drop(drop, axis=1)
-
-# One-hot encoding
-df_test = pd.get_dummies(df, columns=['Dir', 'Proto', 'dTos'])
-
-# Xóa dấu cách khỏi tên cột
-df_test.columns = df_test.columns.str.replace(' ', '', regex=False)
-
-# Các cột cần giữ lại (giống lúc train model)
-processed_columns = ['Dur', 'TotPkts', 'TotBytes', 'SrcBytes', 
-                     'Dir_->', 'Dir_<->', 'Dir_others', 
-                     'Proto_icmp', 'Proto_tcp', 'Proto_udp',
-                     'dTos_0.0', 'dTos_others']
-
-# Khởi tạo các cột *_others nếu chưa có
-for col in ['Dir_others',  'dTos_others']:
-    if col not in df_test.columns:
-        df_test[col] = 0
-
-# Duyệt qua các cột và gom các one-hot "lạ" vào *_others
-for col in df_test.columns:
-    if col.startswith('Dir_') and col not in processed_columns:
-        df_test['Dir_others'] += df_test[col]
-        df_test.drop(columns=col, inplace=True)
-    elif col.startswith('dTos_') and col not in processed_columns:
-        df_test['dTos_others'] += df_test[col]
-        df_test.drop(columns=col, inplace=True)
-
-# Thêm các cột còn thiếu (nếu có) với giá trị = 0
-for col in processed_columns:
-    if col not in df_test.columns:
-        df_test[col] = 0
-
-df_test = df_test[processed_columns]
+    processed_columns = ['Dur', 'TotPkts', 'TotBytes', 'SrcBytes',  # danh sách cột train
+                        'Dir_->', 'Dir_<->',
+                        'Proto_icmp','Proto_tcp', 'Proto_udp',
+                        'dTos_0.0', 'dTos_10.0']
 
 
-model = joblib.load(r'C:\python\VuHai-20213903\dump_random_forest.pkl')
+    df_test.columns = df_test.columns.str.replace(' ', '', regex=False)
 
-
-y_pred = model.predict(df_test)
-
-df_test['y_pred'] = y_pred     
-
-
-unique, counts = np.unique(y_pred, return_counts=True)
-total = len(y_pred)
-
-count_botnet = 0
-
-for label, count in zip(unique, counts):
-    percent_botnet = (count / total) * 100
-    print(f"Giá trị {label}: {count} mẫu ({percent_botnet:.2f}%)")
- 
-    if label == 1: 
-        count_botnet = count
-        #if percent_botnet > 50 and count_botnet > 1000:
-            
-        attack_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-   
-    # #     #  Gọi file ml.py
-    # #     #  subprocess.run(['python', 'ml.py'])
+    # Duyệt qua các cột và gom các one-hot "lạ" vào *_others
+    for col in df_test.columns:
+        if col.startswith('Dir_') and col not in processed_columns:
     
-rows_label_1 = df_test[df_test['y_pred'] == 1]  # in ra các dòng label = 1 
-rows_label_1 = rows_label_1.drop("y_pred", axis=1)
+            df_test.drop(columns=col, inplace=True)
+        elif col.startswith('dTos_') and col not in processed_columns:
+            df_test.drop(columns=col, inplace=True)
 
-dur = round( rows_label_1['Dur'].mean() , 3 ) 
-tot_pkts = int( rows_label_1['TotPkts'].mean())
-tot_bytes = int( rows_label_1['TotBytes'].mean() )
-src_bytes = int( rows_label_1['SrcBytes'].mean() )
-dtos_0_0 = round ( rows_label_1['dTos_0.0'].mean() ,3 )
+    # Thêm các cột còn thiếu (nếu có) với giá trị = 0
+    for col in processed_columns:
+        if col not in df_test.columns:
+            df_test[col] = 0
+
+    df_test = df_test[processed_columns]
 
 
-# Đếm số lượng True trong mỗi cột dir
-count_dir1 = rows_label_1['Dir_->'].sum()  # Số lượng True trong cột Dir_->
-count_dir2 = rows_label_1['Dir_<->'].sum()  # Số lượng True trong cột Dir_<->
-count_dir3  = rows_label_1['Dir_others'].sum()  #Số lượng True trong cột DIr_others
-if count_dir1 > count_dir2 and count_dir1 > count_dir3:
+    model = joblib.load(r'C:\python\VuHai-20213903\code_py\dump_random_forest.pkl')
+
+
+    y_pred = model.predict(df_test.values)
+
+    df_test['y_pred'] = y_pred     
+
+
+    unique, counts = np.unique(y_pred, return_counts=True)
+    total = len(y_pred)
+
+    count_botnet = 0
+    percent_botnet = 0
+    for label, count in zip(unique, counts):
+        percent_botnet = (count / total) * 100
+        print(f"Giá trị {label}: {count} mẫu ({percent_botnet:.2f}%)")
     
-    dir_forward = 1
-    dir_bidirectional = 0
-    dir_others = 0
+        if label == 1: 
+            count_botnet = count
+            if percent_botnet > 9 and count_botnet > 1000:
+                
+                attack_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+
+      #       Gọi file ml.py
+                subprocess.run(['python', 'ml.py'])
+        
+                rows_label_1 = df_test[df_test['y_pred'] == 1]  # in ra các dòng label = 1 
+                rows_label_1 = rows_label_1.drop("y_pred", axis=1)
+
+                dur = round( rows_label_1['Dur'].mean() , 3 ) 
+                tot_pkts = int( rows_label_1['TotPkts'].mean())
+                tot_bytes = int( rows_label_1['TotBytes'].mean() )
+                src_bytes = int( rows_label_1['SrcBytes'].mean() )
+                dtos_0_0 = round ( rows_label_1['dTos_0.0'].mean() ,3 )
+                dtos_10_0 = round ( rows_label_1['dTos_10.0'].mean() ,3 )
+
+
+                # Đếm số lượng True trong mỗi cột dir
+                count_dir1 = rows_label_1['Dir_->'].sum()  # Số lượng True trong cột Dir_->
+                count_dir2 = rows_label_1['Dir_<->'].sum()  # Số lượng True trong cột Dir_<->
+                if count_dir1 > count_dir2  :
+                    
+                    dir_forward = 1
+                    dir_bidirectional = 0
+                
+                    
+                elif count_dir2 > count_dir1 :
+                    
+                    dir_forward = 0
+                    dir_bidirectional = 1
+                
+                else:  # các trường hợp khác không thể dự đoán được nên cho bằng NaN hết    
+                    dir_forward = None
+                    dir_bidirectional = None
+
+
+                # Đếm số lượng True trong mỗi cột proto
+                count_icmp = rows_label_1['Proto_icmp'].sum()  # Số lượng True trong cột Proto_icmp
+                count_tcp = rows_label_1['Proto_tcp'].sum()  # Số lượng True trong cột Proto_tcp
+                count_udp = rows_label_1['Proto_udp'].sum()  # Số lượng True trong cột Proto_udp
+
+                if count_icmp > count_tcp and count_icmp > count_udp :
+                    proto_icmp = 1
+                    proto_tcp = 0
+                    proto_udp = 0
+
+                elif count_tcp > count_icmp and count_tcp > count_udp :
+                    proto_icmp = 0
+                    proto_tcp = 1
+                    proto_udp = 0
+                    
+                elif count_udp > count_icmp and count_udp > count_tcp :
+                    proto_icmp = 0
+                    proto_tcp = 0
+                    proto_udp = 1
+                    
+                else:# các trường hợp khác không thể dự đoán được nên cho bằng NaN hết    
+                    proto_icmp = None
+                    proto_tcp = None
+                    proto_udp = None
+
+
+except Exception as e : 
+    print (f'Lỗi {e} , xin vui lòng thử lại !')
     
-elif count_dir2 > count_dir1 and count_dir2 > count_dir3:
-    
-    dir_forward = 0
-    dir_bidirectional = 1
-    dir_others = 0
-
-elif count_dir3 > count_dir1 and count_dir3 > count_dir2:
-
-    dir_forward = 0
-    dir_bidirectional = 0
-    dir_others = 1
-else:  # các trường hợp khác không thể dự đoán được nên cho bằng NaN hết    
-    dir_forward = "NaN"
-    dir_bidirectional = "NaN"
-    dir_others = "NaN"
-
-
-# Đếm số lượng True trong mỗi cột proto
-count_icmp = rows_label_1['Proto_icmp'].sum()  # Số lượng True trong cột Proto_icmp
-count_tcp = rows_label_1['Proto_tcp'].sum()  # Số lượng True trong cột Proto_tcp
-count_udp = rows_label_1['Proto_udp'].sum()  # Số lượng True trong cột Proto_udp
-
-if count_icmp > count_tcp and count_icmp > count_udp:
-    proto_icmp = 1
-    proto_tcp = 0
-    proto_udp = 0
-elif count_tcp > count_icmp and count_tcp > count_udp:
-    proto_icmp = 0
-    proto_tcp = 1
-    proto_udp = 0
-elif count_udp > count_icmp and count_udp > count_tcp:
-    proto_icmp = 0
-    proto_tcp = 0
-    proto_udp = 1
-    
-else:# các trường hợp khác không thể dự đoán được nên cho bằng NaN hết    
-    proto_icmp = "NaN"
-    proto_tcp = "NaN"
-    proto_udp = "NaN"
-
-
-
-

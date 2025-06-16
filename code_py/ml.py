@@ -11,7 +11,7 @@ def send_email_alert(attack_time):
     password = "nujc itdg wqjq zdiq"
 
     subject = "Cảnh báo !!!"
-    body = f"Phát hiện máy bạn bị tấn công đáng ngờ lúc: {attack_time} ,ấn link ... xem chi tiết. "
+    body = f"Phát hiện máy bạn bị tấn công đáng ngờ lúc: {attack_time} ,nhấn http://127.0.0.1:8050/ xem Dashboard. "
 
     msg = MIMEMultipart()
     msg['From'] = sender_email
@@ -29,6 +29,5 @@ def send_email_alert(attack_time):
     except Exception as e:
         print(f"Lỗi khi gửi email: {e}")
 
-# Test gửi cảnh báo
 attack_time1 = attack_time
 send_email_alert(attack_time1)

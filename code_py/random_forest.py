@@ -1,10 +1,10 @@
-import time 
-import network2 as net
+import Data_Preprocessing as net
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
-from sklearn.preprocessing import label_binarize
 import joblib
+from sklearn.preprocessing import label_binarize
+
 x_train, x_test, y_train, y_test = net.ml()
 
 model = RandomForestClassifier(
@@ -24,9 +24,8 @@ with open ('dump_random_forest.pkl', 'wb') as file :
 
 y_pred_dt = model.predict(x_test)
 
-# Đánh giá mô hình
 accuracy = accuracy_score(y_test, y_pred_dt)
-precision = precision_score(y_test, y_pred_dt, average='macro')  # hoặc 'weighted' tùy vào bài toán
+precision = precision_score(y_test, y_pred_dt, average='macro')  
 recall = recall_score(y_test, y_pred_dt, average='macro')
 f1 = f1_score(y_test, y_pred_dt, average='macro')
 
@@ -37,17 +36,13 @@ print(f"F1-score: {f1:.4f}")
 print("Train acc:", model.score(x_train, y_train))
 print("Test acc :", model.score(x_test, y_test))
 
-# === ROC AUC cho từng label ===
-# Lấy danh sách các lớp
+
 classes = np.unique(y_test)
 
-# Dự đoán xác suất
 y_score = model.predict_proba(x_test)
 
-# Binarize nhãn thật thành one-hot
 y_test_bin = label_binarize(y_test, classes=classes)
 
-# Tính ROC AUC cho từng lớp
 print("\nROC AUC per label:")
 for i, label in enumerate(classes):
     auc = roc_auc_score(y_test_bin[:, i], y_score[:, i])
