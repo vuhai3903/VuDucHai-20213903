@@ -14,8 +14,7 @@ dt = DecisionTreeClassifier(
     max_depth=15,
     max_features='sqrt',
     random_state=42,
-    criterion='gini',
-    splitter='best',
+
 )
 
 

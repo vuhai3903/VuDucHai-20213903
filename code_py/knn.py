@@ -7,15 +7,12 @@ import numpy as np
 
 x_train, x_test, y_train, y_test = net.ml()
 
-
 knn = KNeighborsClassifier(
     n_neighbors=5,
     weights='uniform',
-    algorithm='auto',
-    leaf_size=30,
     metric='minkowski',
     metric_params=None,
-    n_jobs=None
+    n_jobs=-1 	
 )
 
 knn.fit(x_train, y_train)

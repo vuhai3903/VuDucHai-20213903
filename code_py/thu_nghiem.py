@@ -24,15 +24,18 @@ try :
 
     df_test.columns = df_test.columns.str.replace(' ', '', regex=False)
 
-    # Duyệt qua các cột và gom các one-hot "lạ" vào *_others
+    #Loại bỏ các cột OneHot-Encoding không có trong processed_columns
     for col in df_test.columns:
         if col.startswith('Dir_') and col not in processed_columns:
-    
             df_test.drop(columns=col, inplace=True)
-        elif col.startswith('dTos_') and col not in processed_columns:
+            
+        if col.startswith('Proto_') and col not in processed_columns:
             df_test.drop(columns=col, inplace=True)
-
-    # Thêm các cột còn thiếu (nếu có) với giá trị = 0
+            
+        if col.startswith('dTos_') and col not in processed_columns:
+            df_test.drop(columns=col, inplace=True)
+ 
+    # Thêm các cột còn thiếu với giá trị = 0
     for col in processed_columns:
         if col not in df_test.columns:
             df_test[col] = 0
@@ -54,18 +57,14 @@ try :
     count_botnet = 0
     percent_botnet = 0
     for label, count in zip(unique, counts):
-        percent_botnet = (count / total) * 100
-        print(f"Giá trị {label}: {count} mẫu ({percent_botnet:.2f}%)")
-    
+        
         if label == 1: 
             count_botnet = count
-            if percent_botnet > 9 and count_botnet > 1000:
+            percent_botnet = (count_botnet / total) * 100
+
+    if percent_botnet > 40 and count_botnet > 1000:
                 
                 attack_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
-
-      #       Gọi file ml.py
-                subprocess.run(['python', 'ml.py'])
         
                 rows_label_1 = df_test[df_test['y_pred'] == 1]  # in ra các dòng label = 1 
                 rows_label_1 = rows_label_1.drop("y_pred", axis=1)

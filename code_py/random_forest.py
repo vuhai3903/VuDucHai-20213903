@@ -9,7 +9,6 @@ x_train, x_test, y_train, y_test = net.ml()
 
 model = RandomForestClassifier(
     n_estimators=285,
-    criterion='gini',
     max_depth=15,
     min_samples_split=5,
     min_samples_leaf=3,
