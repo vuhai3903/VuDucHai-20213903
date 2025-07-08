@@ -8,10 +8,9 @@ import numpy as np
 x_train, x_test, y_train, y_test = net.ml()
 
 knn = KNeighborsClassifier(
-    n_neighbors=5,
-    weights='uniform',
-    metric='minkowski',
-    metric_params=None,
+    n_neighbors=5,  #tham số K
+    weights='uniform',  
+    metric='euclidean' ,
     n_jobs=-1 	
 )
 

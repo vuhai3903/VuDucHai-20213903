@@ -17,7 +17,6 @@ def ml():
   
     df4 = pd.read_csv(r"C:\python\dataset\capture20110815-2.csv")
     df5= pd.read_csv(r"C:\python\dataset\capture20110815-3.csv")
-
     df11 = pd.read_csv(r"C:\python\dataset\capture20110818.csv")
     df12 = pd.read_csv(r"C:\python\dataset\capture20110818-2.csv")
 
@@ -48,12 +47,12 @@ def ml():
 #2.1 mã hoá với giá trị số
     # def encode_dir_proto(df):
     #     dir_map = {'<->': 1, '->': 2}
-    #     proto_map = {'udp': 17, 'tcp': 6, 'icmp': 1}
+    #     proto_map = {'udp': 20, 'tcp': 30, 'icmp': 40}
 
-    #     df['Dir'] = df['Dir'].astype(str).str.strip() 
+    #     df['Dir'] = df['Dir'].str.strip() 
     #     df['Dir'] = df['Dir'].map(dir_map).fillna(0)   
 
-    #     df['Proto'] = df['Proto'].astype(str).str.strip()
+    #     df['Proto'] = df['Proto'].str.strip()
     #     df['Proto'] = df['Proto'].map(proto_map).fillna(0)
 
     #     return df
@@ -62,33 +61,22 @@ def ml():
  
 
 #  2.2 one hot endcoding
-    def OneHot_Ending(df_1_4_2):
 
-         dir_values = ['<->', '->']
-         proto_values = ['tcp', 'udp', 'icmp']
-         sTos_values = ['0.0', '10.0']
-         dTos_values = ['0.0', '10.0']
+    def OneHot_Ending(df):
 
-         def map_limited_values(val, valid_list):
-             return val if val in valid_list else 'others'
+        dir_values = ['<->', '->']
+        proto_values = ['tcp', 'udp', 'icmp']
+        tos_values = ['0.0', '10.0']
 
-         df_1_4_2['Dir'] = df_1_4_2['Dir'].str.strip().apply(lambda x: x if x in dir_values else 'others')
-         df_1_4_2['Proto'] = df_1_4_2['Proto'].apply(lambda x: map_limited_values(x.lower(), proto_values))
-         df_1_4_2['sTos'] = df_1_4_2['sTos'].astype(str).apply(lambda x: map_limited_values(x, sTos_values))
-         df_1_4_2['dTos'] = df_1_4_2['dTos'].astype(str).apply(lambda x: map_limited_values(x, dTos_values))
+        df['Dir'] = df['Dir'].str.strip().apply(lambda x: x if x in dir_values else 'others')
+        df['Proto'] = df['Proto'].str.lower().apply(lambda x: x if x in proto_values else 'others')
+        df['sTos'] = df['sTos'].apply(lambda x: x if x in tos_values else 'others')
+        df['dTos'] = df['dTos'].apply(lambda x: x if x in tos_values else 'others')
 
-         encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
+        df_encoded = pd.get_dummies(df, columns=['Dir', 'Proto', 'sTos', 'dTos'])
 
-         categorical_cols = ['Dir', 'Proto', 'sTos', 'dTos']
-         encoded = encoder.fit_transform(df_1_4_2[categorical_cols])
+        return df_encoded
 
-         encoded_cols = encoder.get_feature_names_out(categorical_cols)
-         encoded_df_1_4_2 = pd.DataFrame(encoded, columns=encoded_cols)
-
-         df_1_4_2_final = df_1_4_2.drop(columns=categorical_cols).reset_index(drop=True)
-         df_1_4_2_final = pd.concat([df_1_4_2_final, encoded_df_1_4_2.reset_index(drop=True)], axis=1)
-
-         return df_1_4_2_final
     df = OneHot_Ending(df)
   
     x = df.drop('Label', axis=1)
@@ -101,8 +89,8 @@ def ml():
 
 #     # def anova(x, y):
     
-#     #     selector = SelectKBest(score_func=f_classif,k=11)  # k là cọt đặc trưng muốn giữ 
-#     #     x_new = selector.fit_transform(x, y)
+#     #     x1 = SelectKBest(score_func=f_classif,k=10)  # k là cọt đặc trưng muốn giữ 
+#     #     x_new = x1.fit_transform(x, y)
 #     #     return x_new
     
 #     # x = anova(x, y)
@@ -114,10 +102,11 @@ def ml():
 
     def chi_squared(x, y):
 
-        x1 = SelectKBest(chi2, k=11)
-        x=x1.fit_transform(x, y)
+        x1 = SelectKBest(chi2, k=10)
+        x_new = x1.fit_transform(x, y)
 
-        return x
+        return x_new
+    
     x = chi_squared(x,y)
 
 
@@ -141,7 +130,7 @@ def ml():
     
 
     def Nearmiss(x, y):
-        nm = NearMiss(version=1, sampling_strategy={0: 700000, 1: 340586, 2: 338347}) # tổng 0 = 1 +2 
+        nm = NearMiss(version=1, sampling_strategy={0: 240000, 1: 158000, 2: 80451}) # tổng 0 = 1 +2 
         x, y = nm.fit_resample(x, y)
 
         

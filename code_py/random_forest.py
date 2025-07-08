@@ -8,8 +8,8 @@ from sklearn.preprocessing import label_binarize
 x_train, x_test, y_train, y_test = net.ml()
 
 model = RandomForestClassifier(
-    n_estimators=285,
-    max_depth=15,
+    n_estimators=285, # số cây 
+    max_depth=15,    
     min_samples_split=5,
     min_samples_leaf=3,
     max_features='sqrt',

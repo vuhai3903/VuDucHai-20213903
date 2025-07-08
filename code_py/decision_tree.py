@@ -9,12 +9,12 @@ x_train, x_test, y_train, y_test = net.ml()
 
 # Khởi tạo Decision Tree
 dt = DecisionTreeClassifier(
-    min_samples_split=5,
-    min_samples_leaf=2,
-    max_depth=15,
+    min_samples_split=5,  # nút tối thiểu
+    min_samples_leaf=2,   # lá tối thiểu 
+    max_depth=15,         
     max_features='sqrt',
     random_state=42,
-
+    n_jobs=-1
 )
 
 
